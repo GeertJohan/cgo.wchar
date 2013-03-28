@@ -4,8 +4,8 @@ package wchar
 import "C"
 import (
 	"errors"
-	"github.com/davecgh/go-spew/spew"
 	"log"
+	"unsafe"
 )
 
 // go representation of a wchar
@@ -40,15 +40,64 @@ func GoStringToWcharString(input string) (WcharString, error) {
 }
 
 // convert a *C.wchar_t to a WcharString
-func WcharPtrToWcharString(first interface{}) (WcharString, error) {
-	wcharPtr := first.(*C.wchar_t)
-	//++ do stuff
-	spew.Dump(wcharPtr)
-	return nil, errors.New("not implemented yet")
+func WcharPtrToWcharString(first unsafe.Pointer) (WcharString, error) {
+	wcharPtr := uintptr(first)
+
+	// allocate new WcharString to fill with data. Cap is unknown
+	ws := make(WcharString, 0)
+
+	// append data using pointer arithmic
+	var x Wchar
+	for {
+		// get Wchar
+		x = *((*Wchar)(unsafe.Pointer(wcharPtr)))
+
+		// check for null byte terminator
+		if x == 0 {
+			break
+		}
+
+		// append Wchar to WcharString
+		ws = append(ws, x)
+
+		//++ increment pointer
+		//++ FIXME: doing this properly??
+		wcharPtr += 4
+
+		break //++ remove this when pointer arithmic is fixed.
+	}
+
+	return nil, errors.New("not implemented yet") //++ TODO: is return error requirerd?
+}
+
+// convert a *C.wchar_t and length int to a WcharString
+func WcharPtrIntToWcharString(first unsafe.Pointer, length int) (WcharString, error) {
+	wcharPtr := uintptr(first)
+
+	// allocate new WcharString to fill with data. Only set cap, later use append
+	ws := make(WcharString, 0, length)
+
+	// append data using pointer arithmic
+	var x Wchar
+	for i := 0; i < length; i++ {
+		// get Wchar
+		x = *((*Wchar)(unsafe.Pointer(wcharPtr)))
+
+		// append Wchar to WcharString
+		ws = append(ws, x)
+
+		//++ increment pointer
+		//++ FIXME: doing this properly??
+		wcharPtr += 4
+
+		break //++ remove this when pointer arithmic is fixed.
+	}
+
+	return nil, errors.New("not imlpemented yet") //++ TODO: is return error requirerd?
 }
 
 // convert a *C.wchar_t to a Go string
-func WcharPtrToGoString(first interface{}) (string, error) {
+func WcharPtrToGoString(first unsafe.Pointer) (string, error) {
 	ws, err := WcharPtrToWcharString(first)
 	if err != nil {
 		return "", err
@@ -57,19 +106,12 @@ func WcharPtrToGoString(first interface{}) (string, error) {
 }
 
 // convert a *C.wchar_t and length int to a Go string
-func WcharPtrIntToGoString(first interface{}, length int) string {
-	// asert the pointer to be *C.wchar_t (would direct assert to Wchar also work?)
-	wcharPtr := first.(*C.wchar_t)
-
-	// allocate new WcharString to fill with data. Only set cap, later use append
-	ws := make(WcharString, 0, length)
-
-	// append data using pointer arithmic
-	for i := 0; i < length; i++ {
-		ws = append(ws, (Wchar)(*wcharPtr))
-		break //++ remove this when pointer arithmic is fixed.
+func WcharPtrIntToGoString(first unsafe.Pointer, length int) (string, error) {
+	ws, err := WcharPtrIntToWcharString(first, length)
+	if err != nil {
+		return "", err
 	}
 
 	// Convert and return Go string
-	return ws.GoString()
+	return ws.GoString(), nil
 }

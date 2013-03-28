@@ -25,11 +25,6 @@ var (
 // http://www.gnu.org/savannah-checkouts/gnu/libiconv/documentation/libiconv-1.13/iconv.3.html
 // http://www.gnu.org/savannah-checkouts/gnu/libiconv/documentation/libiconv-1.13/iconv_close.3.html
 
-func findSize(first *C.wchar_t) int {
-	//++ find size for C.wchar_t string
-	return 0
-}
-
 // Internal helper function, wrapped by several other functions
 func convertGoStringToWcharString(input string) (output WcharString, err error) {
 	// open iconv
