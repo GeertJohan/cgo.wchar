@@ -1,128 +1,73 @@
 package wchar
 
-// #include <stdlib.h>
 // #include <wchar.h>
-// #include <iconv.h>
 import "C"
 import (
-	"encoding/binary"
-	"fmt"
+	"errors"
 	"github.com/davecgh/go-spew/spew"
-	"unsafe"
+	"log"
 )
 
-var (
-	strWchar = C.CString("wchar_t//TRANSLIT")
-	strChar  = C.CString("//TRANSLIT")
-	strAscii = C.CString("ascii//TRANSLIT")
-	strUtf8  = C.CString("utf-8//TRANSLIT")
-)
+// go representation of a wchar
+type Wchar int32
 
-// Use iconv. It seems to support conversion between char and wchar_t
-// http://www.gnu.org/savannah-checkouts/gnu/libiconv/documentation/libiconv-1.13/iconv_open.3.html
-// http://www.gnu.org/savannah-checkouts/gnu/libiconv/documentation/libiconv-1.13/iconv.3.html
-// http://www.gnu.org/savannah-checkouts/gnu/libiconv/documentation/libiconv-1.13/iconv_close.3.html
+// go representation of a wchar string (array)
+type WcharString []Wchar
 
-func FromGoString(input string) (output []C.wchar_t, err error) {
-	// open iconv
-	iconv, errno := C.iconv_open(strWchar, strUtf8)
-	if iconv == nil || errno != nil {
-		return nil, fmt.Errorf("Could not create iconv instance: %s", errno)
-	}
-	defer C.iconv_close(iconv)
-
-	// calculate bufferSizes in bytes
-	bufferSizeIn := len([]byte(input)) // count exact amount of bytes
-	bufferSizeOut := len(input) * 4    // wide char seems to be 4 bytes for every single- or multi-byte character. Not very sure though.
-
-	// bufferSizes for C (copies, because iconv will touch them)
-	bytesLeftIn := bufferSizeIn
-	bytesLeftInCSize := C.size_t(bytesLeftIn)
-	bytesLeftOut := bufferSizeOut
-	bytesLeftOutCSize := C.size_t(bytesLeftOut)
-
-	// input for C
-	inputCString := C.CString(input)
-	defer C.free(unsafe.Pointer(inputCString))
-
-	// create output buffer
-	outputChars := make([]int8, bufferSizeOut)
-
-	// output for C
-	outputCString := (*C.char)(&outputChars[0])
-
-	x, errno := C.iconv(iconv, &inputCString, &bytesLeftInCSize, &outputCString, &bytesLeftOutCSize)
-	spew.Dump(x)
-	spew.Dump(errno)
-
-	output = make([]C.wchar_t, 0, len(input))
-	for len(outputChars) >= 4 {
-		// create 4 position byte slice
-		b := make([]byte, 4)
-		b[0] = byte(outputChars[0])
-		b[1] = byte(outputChars[1])
-		b[2] = byte(outputChars[2])
-		b[3] = byte(outputChars[3])
-		uchar := binary.LittleEndian.Uint32(b)
-		if uchar == 0 { // find null terminator (doing this right?)
-			break
-		}
-		// Combine 4 position byte slice into uint32, and append uint32 to outputUint32
-		output = append(output, C.wchar_t(uchar))
-		// reslice the outputChars
-		outputChars = outputChars[4:]
-	}
-
-	return output, nil
+// Create a new Wchar string
+// FIXME: why hardcoded length?? Isn't there a better way to do this?
+func NewWcharString(length int) WcharString {
+	return make(WcharString, length)
 }
 
-func ToGoString(input *C.wchar_t) (output string, err error) {
-	// open iconv
-	iconv, errno := C.iconv_open(strUtf8, strWchar)
-	if iconv == nil || errno != nil {
-		return "", fmt.Errorf("Could not create iconv instance: %s", errno)
+// Return pointer to first element
+func (ws WcharString) Pointer() *Wchar {
+	return &ws[0]
+}
+
+// Convert and get WcharString as Go string
+func (ws WcharString) GoString() string {
+	str, err := convertWcharStringToGoString(ws)
+	if err != nil {
+		log.Printf("Error at convertWcharStringToGoString(ws): %s\n", err)
 	}
-	defer C.iconv_close(iconv)
+	return str
+}
 
-	inputAsChars := make([]C.char, 0)
-	for {
-		nextWchar := *input
-		b := make([]byte, 4)
-		binary.LittleEndian.PutUint32(b, uint32(nextWchar))
-		spew.Dump(b)
-		if b[0] == 0 { // find null terminator (doing this right?)
-			break
-		}
-		//++ do something with b
-		//++ split b into seperate bytes, make those int8's.. make those int8's C.char again. Add the C.char to inputAsChars
+// Create a Go string from a WcharString
+func GoStringToWcharString(input string) (WcharString, error) {
+	//++
+	return nil, errors.New("not implemented yet")
+}
 
-		break // remove when pointer arithmic is working and actual loop can be done
+// Convert a *C.wchar_t to a WcharString
+func WcharPtrToWcharString(first interface{}) (WcharString, error) {
+	wcharPtr := first.(*C.wchar_t)
+	//++ do stuff
+	spew.Dump(wcharPtr)
+	return nil, errors.New("not implemented yet")
+}
+
+// Convert a *C.wchar_t to a Go string
+func WcharPtrToGoString(first interface{}) (string, error) {
+	ws, err := WcharPtrToWcharString(first)
+	if err != nil {
+		return "", err
 	}
+	return ws.GoString(), nil
+}
 
-	// input for C
-	inputAsCharsFirst := &inputAsChars[0]
+// Convert a *C.wchar_t and length int to a Go string
+func WcharPtrIntToGoString(first interface{}, length int) string {
+	// asert the pointer to be *C.wchar_t (would direct assert to Wchar also work?)
+	wcharPtr := first.(*C.wchar_t)
 
-	// calculate buffer size for input
-	bufferSizeIn := len(inputAsChars)
-	bufferLeftIn := bufferSizeIn
-	bytesLeftInCSize := C.size_t(bufferLeftIn)
+	// allocate new WcharString to fill with data
+	ws := NewWcharString(length)
 
-	// calculate buffer size for output
-	bufferSizeOut := len(inputAsChars)
-	bytesLeftOut := bufferSizeOut
-	bytesLeftOutCSize := C.size_t(bytesLeftOut)
+	//++ do pointer arithmic and store values in array
+	ws[0] = (Wchar)(*wcharPtr)
 
-	// create output buffer
-	outputChars := make([]int8, bufferSizeOut)
-
-	// output for C
-	outputCString := (*C.char)(&outputChars[0])
-
-	x, errno := C.iconv(iconv, &inputAsCharsFirst, &bytesLeftInCSize, &outputCString, &bytesLeftOutCSize)
-	spew.Dump(x)
-	spew.Dump(errno)
-
-	//++ do processing on outputChars
-
-	return "todo", nil
+	// Convert and return Go string
+	return ws.GoString()
 }
