@@ -59,7 +59,7 @@ func convertGoStringToWcharString(input string) (output WcharString, err error) 
 	}
 
 	// Convert []int8 to WcharString
-	output = make(WcharString, 0, len(input))
+	output = make(WcharString, 0, len(input)+4)
 	wcharAsByteAry := make([]byte, 4)
 	for len(outputChars) >= 4 {
 		// create 4 position byte slice
@@ -77,6 +77,7 @@ func convertGoStringToWcharString(input string) (output WcharString, err error) 
 		// reslice the outputChars
 		outputChars = outputChars[4:]
 	}
+	output = append(output, Wchar(0x0))
 
 	return output, nil
 }
