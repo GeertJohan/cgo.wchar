@@ -82,6 +82,11 @@ func convertGoStringToWcharString(input string) (output WcharString, err error) 
 }
 
 func convertWcharStringToGoString(input WcharString) (output string, err error) {
+	// Return empty string if len(input) == 0
+	if len(input) == 0 {
+		return "", nil
+	}
+
 	// open iconv
 	iconv, errno := C.iconv_open(iconvCharsetUtf8, iconvCharsetWchar)
 	if iconv == nil || errno != nil {
@@ -95,6 +100,7 @@ func convertWcharStringToGoString(input WcharString) (output string, err error) 
 		// find null terminator (doing this right?)
 		if nextWchar == 0 {
 			// Return empty string if there are no chars in buffer
+			//++ FIXME: this should NEVER be the case because input is checked at the begin of this function.
 			if len(inputAsCChars) == 0 {
 				return "", nil
 			}

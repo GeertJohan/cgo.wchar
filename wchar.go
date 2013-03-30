@@ -3,7 +3,6 @@ package wchar
 // #include <wchar.h>
 import "C"
 import (
-	"errors"
 	"log"
 	"unsafe"
 )
@@ -26,7 +25,12 @@ func NewWcharStringFromGoString(input string) (WcharString, error) {
 }
 
 // convert a *C.wchar_t to a WcharString
-func NewWcharStringFromWcharPtr(first unsafe.Pointer) (WcharString, error) {
+func NewWcharStringFromWcharPtr(first unsafe.Pointer) WcharString {
+	if uintptr(first) == 0x0 {
+		return NewWcharString(0)
+	}
+
+	// Get uintptr from first wchar_t
 	wcharPtr := uintptr(first)
 
 	// allocate new WcharString to fill with data. Cap is unknown
@@ -35,7 +39,7 @@ func NewWcharStringFromWcharPtr(first unsafe.Pointer) (WcharString, error) {
 	// append data using pointer arithmic
 	var x Wchar
 	for {
-		// get Wchar
+		// get Wchar value
 		x = *((*Wchar)(unsafe.Pointer(wcharPtr)))
 
 		// check for null byte terminator
@@ -49,15 +53,13 @@ func NewWcharStringFromWcharPtr(first unsafe.Pointer) (WcharString, error) {
 		//++ increment pointer
 		//++ FIXME: doing this properly??
 		wcharPtr += 4
-
-		break //++ remove this when pointer arithmic is fixed.
 	}
 
-	return nil, errors.New("not implemented yet") //++ TODO: is return error requirerd?
+	return ws
 }
 
 // convert a *C.wchar_t and length int to a WcharString
-func NewWcharStringFromWcharPtrInt(first unsafe.Pointer, length int) (WcharString, error) {
+func NewWcharStringFromWcharPtrInt(first unsafe.Pointer, length int) WcharString {
 	wcharPtr := uintptr(first)
 
 	// allocate new WcharString to fill with data. Only set cap, later use append
@@ -75,11 +77,9 @@ func NewWcharStringFromWcharPtrInt(first unsafe.Pointer, length int) (WcharStrin
 		//++ increment pointer
 		//++ FIXME: doing this properly??
 		wcharPtr += 4
-
-		break //++ remove this when pointer arithmic is fixed.
 	}
 
-	return nil, errors.New("not imlpemented yet") //++ TODO: is return error requirerd?
+	return ws
 }
 
 // return pointer to first element
@@ -88,32 +88,31 @@ func (ws WcharString) Pointer() *Wchar {
 }
 
 // convert and get WcharString as Go string
-func (ws WcharString) GoString() string {
+// might return an error when conversion failed.
+func (ws WcharString) GoString() (string, error) {
+	log.Println("Going to GoString this ws:")
 	str, err := convertWcharStringToGoString(ws)
 	if err != nil {
 		log.Printf("Error at convertWcharStringToGoString(ws): %s\n", err)
+		return "", err
 	}
-	return str
+	return str, nil
 }
 
 // convert a null terminated *C.wchar_t to a Go string
 // convenient wrapper for WcharPtrToWcharString(first).GoString()
 func WcharPtrToGoString(first unsafe.Pointer) (string, error) {
-	ws, err := NewWcharStringFromWcharPtr(first)
-	if err != nil {
-		return "", err
+	if uintptr(first) == 0x0 {
+		return "", nil
 	}
-	return convertWcharStringToGoString(ws)
+	return convertWcharStringToGoString(NewWcharStringFromWcharPtr(first))
 }
 
 // convert a *C.wchar_t and length int to a Go string
 // convenient wrapper for WcharPtrIntToWcharString(first, length).GoString()
 func WcharPtrIntToGoString(first unsafe.Pointer, length int) (string, error) {
-	ws, err := NewWcharStringFromWcharPtrInt(first, length)
-	if err != nil {
-		return "", err
+	if uintptr(first) == 0x0 {
+		return "", nil
 	}
-
-	// Convert and return Go string
-	return convertWcharStringToGoString(ws)
+	return convertWcharStringToGoString(NewWcharStringFromWcharPtrInt(first, length))
 }
