@@ -99,21 +99,21 @@ func (ws WcharString) GoString() string {
 // convert a null terminated *C.wchar_t to a Go string
 // convenient wrapper for WcharPtrToWcharString(first).GoString()
 func WcharPtrToGoString(first unsafe.Pointer) (string, error) {
-	ws, err := WcharPtrToWcharString(first)
+	ws, err := NewWcharStringFromWcharPtr(first)
 	if err != nil {
 		return "", err
 	}
-	return convertWcharStringToGoString(ws), nil
+	return convertWcharStringToGoString(ws)
 }
 
 // convert a *C.wchar_t and length int to a Go string
 // convenient wrapper for WcharPtrIntToWcharString(first, length).GoString()
 func WcharPtrIntToGoString(first unsafe.Pointer, length int) (string, error) {
-	ws, err := WcharPtrIntToWcharString(first, length)
+	ws, err := NewWcharStringFromWcharPtrInt(first, length)
 	if err != nil {
 		return "", err
 	}
 
 	// Convert and return Go string
-	return convertWcharStringToGoString(ws), nil
+	return convertWcharStringToGoString(ws)
 }
