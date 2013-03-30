@@ -26,6 +26,11 @@ var (
 
 // Internal helper function, wrapped by several other functions
 func convertGoStringToWcharString(input string) (output WcharString, err error) {
+	// quick return when input is empty
+	if input == "" {
+		return NewWcharString(0), nil
+	}
+
 	// open iconv
 	iconv, errno := C.iconv_open(iconvCharsetWchar, iconvCharsetUtf8)
 	if iconv == nil || errno != nil {
