@@ -7,7 +7,6 @@ import "C"
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
 	"unsafe"
 )
 
@@ -54,9 +53,7 @@ func convertGoStringToWcharString(input string) (output WcharString, err error) 
 	// output for C
 	outputCString := (*C.char)(&outputChars[0])
 
-	x, errno := C.iconv(iconv, &inputCString, &bytesLeftInCSize, &outputCString, &bytesLeftOutCSize)
-	spew.Dump(x)
-	spew.Dump(errno)
+	_, errno = C.iconv(iconv, &inputCString, &bytesLeftInCSize, &outputCString, &bytesLeftOutCSize)
 	if errno != nil {
 		return nil, errno
 	}
