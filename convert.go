@@ -72,7 +72,7 @@ func convertGoStringToWcharString(input string) (output WcharString, err error) 
 		if whcarAsUint32 == 0 {
 			break
 		}
-		// Combine 4 position byte slice into uint32, and append uint32 to outputUint32
+		// combine 4 position byte slice into uint32, and append uint32 to outputUint32
 		output = append(output, Wchar(whcarAsUint32))
 		// reslice the outputChars
 		outputChars = outputChars[4:]
@@ -82,8 +82,9 @@ func convertGoStringToWcharString(input string) (output WcharString, err error) 
 	return output, nil
 }
 
+// Internal helper function, wrapped by several other functions
 func convertWcharStringToGoString(input WcharString) (output string, err error) {
-	// Return empty string if len(input) == 0
+	// return empty string if len(input) == 0
 	if len(input) == 0 {
 		return "", nil
 	}
@@ -136,6 +137,7 @@ func convertWcharStringToGoString(input WcharString) (output string, err error) 
 	// output for C
 	outputCString := (*C.char)(&outputChars[0])
 
+	// call iconv for conversion of charsets
 	_, errno = C.iconv(iconv, &inputAsCharsFirst, &bytesLeftInCSize, &outputCString, &bytesLeftOutCSize)
 	if errno != nil {
 		return "", errno
