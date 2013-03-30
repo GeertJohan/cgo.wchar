@@ -1,7 +1,5 @@
 package wchar
 
-// #include <wchar.h>
-import "C"
 import (
 	"unsafe"
 )
