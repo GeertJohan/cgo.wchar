@@ -35,7 +35,7 @@ func convertGoStringToWcharString(input string) (output WcharString, err error) 
 	// open iconv
 	iconv, errno := C.iconv_open(iconvCharsetWchar, iconvCharsetUtf8)
 	if iconv == nil || errno != nil {
-		return nil, fmt.Errorf("Could not create iconv instance: %s", errno)
+		return nil, fmt.Errorf("Could not open iconv instance: %s", errno)
 	}
 	defer C.iconv_close(iconv)
 
@@ -89,23 +89,23 @@ func convertGoStringToWcharString(input string) (output WcharString, err error) 
 }
 
 // Internal helper function, wrapped by several other functions
-func convertWcharStringToGoString(input WcharString) (output string, err error) {
+func convertWcharStringToGoString(ws WcharString) (output string, err error) {
 	// return empty string if len(input) == 0
-	if len(input) == 0 {
+	if len(ws) == 0 {
 		return "", nil
 	}
 
 	// open iconv
 	iconv, errno := C.iconv_open(iconvCharsetUtf8, iconvCharsetWchar)
 	if iconv == nil || errno != nil {
-		return "", fmt.Errorf("Could not create iconv instance: %s", errno.Error())
+		return "", fmt.Errorf("Could not open iconv instance: %s", errno.Error())
 	}
 	defer C.iconv_close(iconv)
 
-	inputAsCChars := make([]C.char, 0, len(input)*4)
+	inputAsCChars := make([]C.char, 0, len(ws)*4)
 	wcharAsBytes := make([]byte, 4)
-	for _, nextWchar := range input {
-		// find null terminator (doing this right?)
+	for _, nextWchar := range ws {
+		// find null terminator
 		if nextWchar == 0 {
 			// Return empty string if there are no chars in buffer
 			//++ FIXME: this should NEVER be the case because input is checked at the begin of this function.
@@ -125,7 +125,7 @@ func convertWcharStringToGoString(input WcharString) (output string, err error) 
 	}
 
 	// input for C
-	inputAsCharsFirst := &inputAsCChars[0]
+	inputAsCCharsPtr := &inputAsCChars[0]
 
 	// calculate buffer size for input
 	bytesLeftInCSize := C.size_t(len(inputAsCChars))
@@ -134,13 +134,13 @@ func convertWcharStringToGoString(input WcharString) (output string, err error) 
 	bytesLeftOutCSize := C.size_t(len(inputAsCChars))
 
 	// create output buffer
-	outputChars := make([]int8, bytesLeftOutCSize)
+	outputChars := make([]C.char, bytesLeftOutCSize)
 
-	// output for C
-	outputCString := (*C.char)(&outputChars[0])
+	// output buffer pointer for C
+	outputCharsPtr := &outputChars[0]
 
 	// call iconv for conversion of charsets, return on error
-	_, errno = C.iconv(iconv, &inputAsCharsFirst, &bytesLeftInCSize, &outputCString, &bytesLeftOutCSize)
+	_, errno = C.iconv(iconv, &inputAsCCharsPtr, &bytesLeftInCSize, &outputCharsPtr, &bytesLeftOutCSize)
 	if errno != nil {
 		return "", errno
 	}
@@ -152,16 +152,16 @@ func convertWcharStringToGoString(input WcharString) (output string, err error) 
 }
 
 // Internal helper function, wrapped by other functions
-func convertGoRuneToWchar(input rune) (output Wchar, err error) {
+func convertGoRuneToWchar(r rune) (output Wchar, err error) {
 	// quick return when input is an empty string
-	if input == '\000' {
+	if r == '\000' {
 		return Wchar(0), nil
 	}
 
 	// open iconv
 	iconv, errno := C.iconv_open(iconvCharsetWchar, iconvCharsetUtf8)
 	if iconv == nil || errno != nil {
-		return Wchar(0), fmt.Errorf("Could not create iconv instance: %s", errno)
+		return Wchar(0), fmt.Errorf("Could not open iconv instance: %s", errno)
 	}
 	defer C.iconv_close(iconv)
 
@@ -175,17 +175,17 @@ func convertGoRuneToWchar(input rune) (output Wchar, err error) {
 	// if the rune would actually contain 2 unicode-point's this will result in massive failure (and probably the end of a process' life)
 
 	// input for C. makes a copy using C malloc and therefore should be free'd.
-	inputCString := C.CString(string(input))
-	defer C.free(unsafe.Pointer(inputCString))
+	runeCString := C.CString(string(r))
+	defer C.free(unsafe.Pointer(runeCString))
 
 	// create output buffer
-	outputChars := make([]int8, 4)
+	outputChars := make([]C.char, 4)
 
-	// output for C
-	outputCString := (*C.char)(&outputChars[0])
+	// output buffer pointer for C
+	outputCharsPtr := &outputChars[0]
 
 	// call iconv for conversion of charsets
-	_, errno = C.iconv(iconv, &inputCString, &bytesLeftInCSize, &outputCString, &bytesLeftOutCSize)
+	_, errno = C.iconv(iconv, &runeCString, &bytesLeftInCSize, &outputCharsPtr, &bytesLeftOutCSize)
 	if errno != nil {
 		return '\000', errno
 	}
@@ -205,24 +205,25 @@ func convertGoRuneToWchar(input rune) (output Wchar, err error) {
 }
 
 // Internal helper function, wrapped by several other functions
-func convertWcharToGoRune(input Wchar) (output rune, err error) {
+func convertWcharToGoRune(w Wchar) (output rune, err error) {
 	// return  if len(input) == 0
-	if input == 0 {
+	if w == 0 {
 		return '\000', nil
 	}
 
 	// open iconv
 	iconv, errno := C.iconv_open(iconvCharsetUtf8, iconvCharsetWchar)
 	if iconv == nil || errno != nil {
-		return '\000', fmt.Errorf("Could not create iconv instance: %s", errno.Error())
+		return '\000', fmt.Errorf("Could not open iconv instance: %s", errno.Error())
 	}
 	defer C.iconv_close(iconv)
 
 	// split Wchar into bytes
 	wcharAsBytes := make([]byte, 4)
-	binary.LittleEndian.PutUint32(wcharAsBytes, uint32(input))
+	binary.LittleEndian.PutUint32(wcharAsBytes, uint32(w))
 
 	// place the wcharAsBytes into wcharAsCChars
+	// TODO: use unsafe.Pointer here to do the conversion?
 	wcharAsCChars := make([]C.char, 0, 4)
 	for i := 0; i < 4; i++ {
 		wcharAsCChars = append(wcharAsCChars, C.char(wcharAsBytes[i]))
@@ -238,10 +239,10 @@ func convertWcharToGoRune(input Wchar) (output rune, err error) {
 	bytesLeftOutCSize := C.size_t(4)
 
 	// create output buffer
-	outputChars := make([]int8, 4)
+	outputChars := make([]C.char, 4)
 
-	// output for C
-	outputCharsPtr := (*C.char)(&outputChars[0])
+	// output buffer pointer for C
+	outputCharsPtr := &outputChars[0]
 
 	// call iconv for conversion of charsets
 	_, errno = C.iconv(iconv, &wcharAsCCharsPtr, &bytesLeftInCSize, &outputCharsPtr, &bytesLeftOutCSize)
