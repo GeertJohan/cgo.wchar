@@ -22,6 +22,10 @@ func (w Wchar) GoRune() (rune, error) {
 	return r, nil
 }
 
+func FromGoRune(r rune) (Wchar, error) {
+	return convertGoRuneToWchar(r)
+}
+
 // FromWcharPtr converts a *C.wchar_t to a Go Wchar
 func FromWcharPtr(ptr unsafe.Pointer) Wchar {
 	// quick return for null pointer
@@ -42,8 +46,8 @@ func NewWcharString(length int) WcharString {
 }
 
 // FromGoString creates a WcharString from a Go string
-func FromGoString(input string) (WcharString, error) {
-	return convertGoStringToWcharString(input)
+func FromGoString(s string) (WcharString, error) {
+	return convertGoStringToWcharString(s)
 }
 
 // FromWcharStringPtr creates a WcharString from a *C.wchar_t.

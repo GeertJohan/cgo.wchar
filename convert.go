@@ -53,7 +53,7 @@ func convertGoStringToWcharString(input string) (output WcharString, err error) 
 	// output for C
 	outputCString := (*C.char)(&outputChars[0])
 
-	// call iconv, return on error
+	// call iconv for conversion of charsets, return on error
 	_, errno = C.iconv(iconv, &inputCString, &bytesLeftInCSize, &outputCString, &bytesLeftOutCSize)
 	if errno != nil {
 		return nil, errno
@@ -72,13 +72,13 @@ func convertGoStringToWcharString(input string) (output WcharString, err error) 
 		wcharAsByteAry[2] = byte(outputChars[2])
 		wcharAsByteAry[3] = byte(outputChars[3])
 		// combine 4 position byte slice into uint32
-		whcarAsUint32 := binary.LittleEndian.Uint32(wcharAsByteAry)
+		wcharAsUint32 := binary.LittleEndian.Uint32(wcharAsByteAry)
 		// find null terminator (doing this right?)
-		if whcarAsUint32 == 0x0 {
+		if wcharAsUint32 == 0x0 {
 			break
 		}
 		// append uint32 to outputUint32
-		output = append(output, Wchar(whcarAsUint32))
+		output = append(output, Wchar(wcharAsUint32))
 		// reslice the outputChars
 		outputChars = outputChars[4:]
 	}
@@ -118,7 +118,7 @@ func convertWcharStringToGoString(input WcharString) (output string, err error) 
 		// split Wchar into bytes
 		binary.LittleEndian.PutUint32(wcharAsBytes, uint32(nextWchar))
 
-		//++ split b into seperate bytes, make those int8's.. make those int8's C.char again. Add the C.char to inputAsCChars
+		// append the bytes as C.char to inputAsCChars
 		for i := 0; i < 4; i++ {
 			inputAsCChars = append(inputAsCChars, C.char(wcharAsBytes[i]))
 		}
@@ -139,7 +139,7 @@ func convertWcharStringToGoString(input WcharString) (output string, err error) 
 	// output for C
 	outputCString := (*C.char)(&outputChars[0])
 
-	// call iconv for conversion of charsets
+	// call iconv for conversion of charsets, return on error
 	_, errno = C.iconv(iconv, &inputAsCharsFirst, &bytesLeftInCSize, &outputCString, &bytesLeftOutCSize)
 	if errno != nil {
 		return "", errno
@@ -167,7 +167,12 @@ func convertGoRuneToWchar(input rune) (output Wchar, err error) {
 
 	// bufferSizes for C
 	bytesLeftInCSize := C.size_t(4)
-	bytesLeftOutCSize := C.size_t(4)
+	bytesLeftOutCSize := C.size_t(4*4)
+	// TODO/FIXME: the last 4 bytes as indicated by bytesLeftOutCSize wont be used...
+	// iconv assumes each given char to be one wchar.
+	// in this case we know that the given 4 chars will actually be one unicode-point and therefore will result in one wchar.
+	// hence, we give the iconv library a buffer of 4 char's size, and tell the library that it has a buffer of 32 char's size.
+	// if the rune would actually contain 2 unicode-point's this will result in massive failure (and probably the end of a process' life)
 
 	// input for C. makes a copy using C malloc and therefore should be free'd.
 	inputCString := C.CString(string(input))
@@ -179,12 +184,13 @@ func convertGoRuneToWchar(input rune) (output Wchar, err error) {
 	// output for C
 	outputCString := (*C.char)(&outputChars[0])
 
+	// call iconv for conversion of charsets
 	_, errno = C.iconv(iconv, &inputCString, &bytesLeftInCSize, &outputCString, &bytesLeftOutCSize)
 	if errno != nil {
 		return '\000', errno
 	}
 
-	// Convert C.char's to Wchar
+	// convert C.char's to Wchar
 	wcharAsByteAry := make([]byte, 4)
 	wcharAsByteAry[0] = byte(outputChars[0])
 	wcharAsByteAry[1] = byte(outputChars[1])
@@ -192,8 +198,8 @@ func convertGoRuneToWchar(input rune) (output Wchar, err error) {
 	wcharAsByteAry[3] = byte(outputChars[3])
 
 	// combine 4 position byte slice into uint32 and convert to Wchar.
-	whcarAsUint32 := binary.LittleEndian.Uint32(wcharAsByteAry)
-	output = Wchar(whcarAsUint32)
+	wcharAsUint32 := binary.LittleEndian.Uint32(wcharAsByteAry)
+	output = Wchar(wcharAsUint32)
 
 	return output, nil
 }
@@ -216,14 +222,14 @@ func convertWcharToGoRune(input Wchar) (output rune, err error) {
 	wcharAsBytes := make([]byte, 4)
 	binary.LittleEndian.PutUint32(wcharAsBytes, uint32(input))
 
-	//++ split b into seperate bytes, make those int8's.. make those int8's C.char again. Add the C.char to inputAsCChars
+	// place the wcharAsBytes into wcharAsCChars
 	wcharAsCChars := make([]C.char, 0, 4)
 	for i := 0; i < 4; i++ {
 		wcharAsCChars = append(wcharAsCChars, C.char(wcharAsBytes[i]))
 	}
 
-	// input for C
-	wcharAsCCharsFirst := &wcharAsCChars[0]
+	// pointer to the first wcharAsCChars
+	wcharAsCCharsPtr := &wcharAsCChars[0]
 
 	// calculate buffer size for input
 	bytesLeftInCSize := C.size_t(4)
@@ -235,10 +241,10 @@ func convertWcharToGoRune(input Wchar) (output rune, err error) {
 	outputChars := make([]int8, 4)
 
 	// output for C
-	outputCString := (*C.char)(&outputChars[0])
+	outputCharsPtr := (*C.char)(&outputChars[0])
 
 	// call iconv for conversion of charsets
-	_, errno = C.iconv(iconv, &wcharAsCCharsFirst, &bytesLeftInCSize, &outputCString, &bytesLeftOutCSize)
+	_, errno = C.iconv(iconv, &wcharAsCCharsPtr, &bytesLeftInCSize, &outputCharsPtr, &bytesLeftOutCSize)
 	if errno != nil {
 		return '\000', errno
 	}
@@ -255,7 +261,6 @@ func convertWcharToGoRune(input Wchar) (output rune, err error) {
 	// combine 4 position byte slice into uint32 and convert to rune.
 	runeAsUint32 := binary.LittleEndian.Uint32(runeAsByteAry)
 	output = rune(runeAsUint32)
-
 
 	return output, nil
 }
