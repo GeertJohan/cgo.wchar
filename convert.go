@@ -252,7 +252,7 @@ func convertWcharToGoRune(input Wchar) (output rune, err error) {
 	runeAsByteAry[2] = byte(outputChars[2])
 	runeAsByteAry[3] = byte(outputChars[3])
 
-	// combine 4 position byte slice into uint32 and convert to Wchar.
+	// combine 4 position byte slice into uint32 and convert to rune.
 	runeAsUint32 := binary.LittleEndian.Uint32(runeAsByteAry)
 	output = rune(runeAsUint32)
 
