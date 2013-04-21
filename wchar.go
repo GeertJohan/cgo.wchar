@@ -7,22 +7,49 @@ import (
 // go representation of a wchar
 type Wchar int32
 
+// return pointer to this Wchar
+func (w Wchar) Pointer() *Wchar {
+	return &w
+}
+
+// convert Wchar to Go rune
+// will return an error when conversion failed.
+func (w Wchar) GoRune() (rune, error) {
+	r, err := convertWcharToGoRune(w)
+	if err != nil {
+		return '\000', err
+	}
+	return r, nil
+}
+
+// FromWcharPtr converts a *C.wchar_t to a Go Wchar
+func FromWcharPtr(ptr unsafe.Pointer) Wchar {
+	// quick return for null pointer
+	if uintptr(ptr) == 0x0 {
+		return Wchar(0)
+	}
+
+	return *((*Wchar)(ptr))
+}
+
 // go representation of a wchar string (array)
 type WcharString []Wchar
 
-// create a new Wchar string
-// FIXME: why hardcoded length?? Isn't there a better way to do this?
+// NewWcharString creates a new WcharString with given length.
+// This is required when the WcharString is being used as write buffer for a call to a C function.
 func NewWcharString(length int) WcharString {
 	return make(WcharString, length)
 }
 
-// create a Go string from a WcharString
-func NewWcharStringFromGoString(input string) (WcharString, error) {
+// FromGoString creates a WcharString from a Go string
+func FromGoString(input string) (WcharString, error) {
 	return convertGoStringToWcharString(input)
 }
 
-// convert a *C.wchar_t to a WcharString
-func NewWcharStringFromWcharPtr(first unsafe.Pointer) WcharString {
+// FromWcharStringPtr creates a WcharString from a *C.wchar_t.
+// It finds the end of the *C.wchar_t string by finding the null terminator.
+func FromWcharStringPtr(first unsafe.Pointer) WcharString {
+	// quick return for null pointer
 	if uintptr(first) == 0x0 {
 		return NewWcharString(0)
 	}
@@ -34,18 +61,18 @@ func NewWcharStringFromWcharPtr(first unsafe.Pointer) WcharString {
 	ws := make(WcharString, 0)
 
 	// append data using pointer arithmic
-	var x Wchar
+	var w Wchar
 	for {
 		// get Wchar value
-		x = *((*Wchar)(unsafe.Pointer(wcharPtr)))
+		w = *((*Wchar)(unsafe.Pointer(wcharPtr)))
 
 		// check for null byte terminator
-		if x == 0 {
+		if w == 0 {
 			break
 		}
 
 		// append Wchar to WcharString
-		ws = append(ws, x)
+		ws = append(ws, w)
 
 		// increment pointer 4 bytes
 		wcharPtr += 4
@@ -56,7 +83,7 @@ func NewWcharStringFromWcharPtr(first unsafe.Pointer) WcharString {
 }
 
 // convert a *C.wchar_t and length int to a WcharString
-func NewWcharStringFromWcharPtrInt(first unsafe.Pointer, length int) WcharString {
+func FromWcharStringPtrN(first unsafe.Pointer, length int) WcharString {
 	if uintptr(first) == 0x0 {
 		return NewWcharString(0)
 	}
@@ -94,8 +121,8 @@ func (ws WcharString) Pointer() *Wchar {
 	return &ws[0]
 }
 
-// convert and get WcharString as Go string
-// might return an error when conversion failed.
+// convert WcharString to Go string
+// will return an error when conversion failed.
 func (ws WcharString) GoString() (string, error) {
 	str, err := convertWcharStringToGoString(ws)
 	if err != nil {
@@ -106,18 +133,26 @@ func (ws WcharString) GoString() (string, error) {
 
 // convert a null terminated *C.wchar_t to a Go string
 // convenient wrapper for WcharPtrToWcharString(first).GoString()
-func WcharPtrToGoString(first unsafe.Pointer) (string, error) {
+func WcharStringPtrToGoString(first unsafe.Pointer) (string, error) {
 	if uintptr(first) == 0x0 {
 		return "", nil
 	}
-	return convertWcharStringToGoString(NewWcharStringFromWcharPtr(first))
+	return convertWcharStringToGoString(FromWcharStringPtr(first))
 }
 
 // convert a *C.wchar_t and length int to a Go string
 // convenient wrapper for WcharPtrIntToWcharString(first, length).GoString()
-func WcharPtrIntToGoString(first unsafe.Pointer, length int) (string, error) {
+func WcharStringPtrNToGoString(first unsafe.Pointer, length int) (string, error) {
 	if uintptr(first) == 0x0 {
 		return "", nil
 	}
-	return convertWcharStringToGoString(NewWcharStringFromWcharPtrInt(first, length))
+	return convertWcharStringToGoString(FromWcharStringPtrN(first, length))
+}
+
+// convenient wrapper for WcharPtrToWcharString(first).GoString()
+func WcharPtrToGoRune(first unsafe.Pointer) (rune, error) {
+	if uintptr(first) == 0x0 {
+		return '\000', nil
+	}
+	return convertWcharToGoRune(FromWcharPtr(first))
 }
