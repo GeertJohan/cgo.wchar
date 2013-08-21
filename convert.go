@@ -1,8 +1,14 @@
 package wchar
 
-// #include <stdlib.h>
-// #include <wchar.h>
-// #include <iconv.h>
+/*
+#cgo darwin LDFLAGS: -liconv
+#include <stdlib.h>
+#ifdef __APPLE__
+#  define LIBICONV_PLUG 1
+#endif
+#include <iconv.h>
+#include <wchar.h>
+*/
 import "C"
 
 import (
