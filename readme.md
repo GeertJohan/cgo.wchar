@@ -1,7 +1,8 @@
+## cgo.wchar
 
+Helps with using wchars with cgo.
 
-**Work in progress!!**
-
+### Example
 Example from the go.hid library:
 ```go
 func (dev *Device) ManufacturerString() (string, error) {
