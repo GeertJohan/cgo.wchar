@@ -22,7 +22,7 @@ func TestStringConversion(t *testing.T) {
 		t.Fatal("Converted string did not match expected WcharString. Lengths are different.")
 	}
 
-	for i:=0; i<len(w); i++ {
+	for i := 0; i < len(w); i++ {
 		if w[i] != expectedWcharString[i] {
 			t.Fatalf("Converted string did not match expected WcharString. Fault at position %d. %d!=%d\n", i, w[i], expectedWcharString[i])
 		}
@@ -38,7 +38,6 @@ func TestWcharStringConversion(t *testing.T) {
 	}
 	expectedGoString := "Iñtërnâtiônàlizætiøn"
 
-
 	str, err := testWcharString.GoString()
 	if err != nil {
 		t.Fatalf("Error on conversion. %s", err.Error())
@@ -48,7 +47,7 @@ func TestWcharStringConversion(t *testing.T) {
 		t.Fatal("Converted WcharString did not match expected string. Lengths are different.")
 	}
 
-	for i:=0; i<len(str); i++ {
+	for i := 0; i < len(str); i++ {
 		if str[i] != expectedGoString[i] {
 			t.Fatalf("Converted WcharString did not match expected string. Fault at position %d. %d!=%d\n", i, str[i], expectedGoString[i])
 		}

@@ -47,7 +47,7 @@ func convertGoStringToWcharString(input string) (output WcharString, err error) 
 
 	// calculate bufferSizes in bytes for C
 	bytesLeftInCSize := C.size_t(len([]byte(input))) // count exact amount of bytes from input
-	bytesLeftOutCSize := C.size_t(len(input)*4)   // wide char seems to be 4 bytes for every single- or multi-byte character. Not very sure though.
+	bytesLeftOutCSize := C.size_t(len(input) * 4)    // wide char seems to be 4 bytes for every single- or multi-byte character. Not very sure though.
 
 	// input for C. makes a copy using C malloc and therefore should be free'd.
 	inputCString := C.CString(input)
@@ -68,7 +68,7 @@ func convertGoStringToWcharString(input string) (output WcharString, err error) 
 	// convert []int8 to WcharString
 	// create WcharString with same length as input, and one extra position for the null terminator.
 	output = make(WcharString, 0, len(input)+1)
-	// create buff to convert each outputChar 
+	// create buff to convert each outputChar
 	wcharAsByteAry := make([]byte, 4)
 	// loop for as long as there are output chars
 	for len(outputChars) >= 4 {
@@ -173,7 +173,7 @@ func convertGoRuneToWchar(r rune) (output Wchar, err error) {
 
 	// bufferSizes for C
 	bytesLeftInCSize := C.size_t(4)
-	bytesLeftOutCSize := C.size_t(4*4)
+	bytesLeftOutCSize := C.size_t(4 * 4)
 	// TODO/FIXME: the last 4 bytes as indicated by bytesLeftOutCSize wont be used...
 	// iconv assumes each given char to be one wchar.
 	// in this case we know that the given 4 chars will actually be one unicode-point and therefore will result in one wchar.
