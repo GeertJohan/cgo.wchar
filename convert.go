@@ -2,6 +2,7 @@ package wchar
 
 /*
 #cgo darwin LDFLAGS: -liconv
+#cgo windows LDFLAGS: -liconv
 #include <stdlib.h>
 #ifdef __APPLE__
 #  define LIBICONV_PLUG 1
