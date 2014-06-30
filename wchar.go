@@ -4,9 +4,6 @@ import (
 	"unsafe"
 )
 
-// go representation of a wchar
-type Wchar int32
-
 // return pointer to this Wchar
 func (w Wchar) Pointer() *Wchar {
 	return &w
