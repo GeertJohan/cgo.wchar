@@ -58,7 +58,7 @@ func convertGoStringToWcharString(input string) (output WcharString, err error) 
 	outputChars := make([]int8, len(input)*4)
 
 	// output for C
-	outputCString := (*C.char)(&outputChars[0])
+	outputCString := (*C.char)(unsafe.Pointer(&outputChars[0]))
 
 	// call iconv for conversion of charsets, return on error
 	_, errno = C.iconv(iconv, &inputCString, &bytesLeftInCSize, &outputCString, &bytesLeftOutCSize)
