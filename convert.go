@@ -55,7 +55,7 @@ func convertGoStringToWcharString(input string) (output WcharString, err error) 
 	defer C.free(unsafe.Pointer(inputCString))
 
 	// create output buffer
-	outputChars := make([]int8, len(input)*4)
+	outputChars := make(OutputChars, len(input)*4)
 
 	// output for C
 	outputCString := (*C.char)(unsafe.Pointer(&outputChars[0]))
@@ -66,7 +66,7 @@ func convertGoStringToWcharString(input string) (output WcharString, err error) 
 		return nil, errno
 	}
 
-	// convert []int8 to WcharString
+	// convert OutputChars to WcharString
 	// create WcharString with same length as input, and one extra position for the null terminator.
 	output = make(WcharString, 0, len(input)+1)
 	// create buff to convert each outputChar
@@ -257,7 +257,7 @@ func convertWcharToGoRune(w Wchar) (output rune, err error) {
 		return '\000', errno
 	}
 
-	// convert outputChars ([]int8, len 4) to Wchar
+	// convert outputChars (OutputChars, len 4) to Wchar
 	// TODO: can this conversion be done easier by using this: ?
 	// output = *((*rune)(unsafe.Pointer(&outputChars[0])))
 	runeAsByteAry := make([]byte, 4)

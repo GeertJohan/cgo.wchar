@@ -1,6 +1,6 @@
-// +build windows
+// +build !windows,!arm
 
 package wchar
 
 // go representation of a wchar
-type Wchar uint16
+type Wchar int32
